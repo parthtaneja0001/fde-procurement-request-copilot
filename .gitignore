@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 .pytest_cache/
 evals/results_*.csv
+data/human_decisions.db
+data/human_decisions.jsonl
