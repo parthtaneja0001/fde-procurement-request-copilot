@@ -23,6 +23,7 @@ PII_DATA_LEVELS = {
 
 def check_policy_and_approvals(
     cost: float | None = None,
+    user_count: int | None = None,
     category: str | None = None,
     data_sensitivity: str | None = None,
     vendor_status: str | None = None,
@@ -36,6 +37,7 @@ def check_policy_and_approvals(
     vendor_api_unavailable: bool = False,
     has_prompt_injection: bool = False,
     has_tool_overlap: bool = False,
+    is_employee_missing: bool = False,
     tool_call_id: str | None = None,
 ) -> dict[str, Any]:
     """DETERMINISTIC policy engine: computes financial approval tiers, specialized reviews (Security, Privacy, Legal),
@@ -47,15 +49,26 @@ def check_policy_and_approvals(
     hard_blocks: list[str] = []
     missing_fields: list[str] = []
 
-    # 1. Cost & Financial Thresholds
+    # 1. Missing parameters verification
     if cost is None:
         missing_fields.append("annual_cost_usd")
-        approvals.append({"role": "Manager", "reason": "Base line-manager review required (cost missing)"})
+    if user_count is None:
+        missing_fields.append("user_count")
+    if not data_sensitivity or data_sensitivity == "unknown":
+        missing_fields.append("data_access_level")
+    if is_employee_missing:
+        missing_fields.append("requester_id")
+
+    if missing_fields:
         risk_flags.append({
             "flag": "missing_information",
             "severity": "HIGH",
-            "reason": "Annual cost is missing from the request",
+            "reason": f"Required fields missing or unverified: {', '.join(missing_fields)}",
         })
+
+    # 2. Cost & Financial Thresholds
+    if cost is None:
+        approvals.append({"role": "Manager", "reason": "Base line-manager review required (cost missing)"})
     else:
         cost_val = float(cost)
         if cost_val <= 1000.00:
@@ -73,7 +86,7 @@ def check_policy_and_approvals(
             approvals.append({"role": "CFO", "reason": "Executive authorization for spend > $25,000"})
             approvals.append({"role": "Procurement", "reason": "Enterprise vendor negotiation and procurement review"})
 
-    # 2. Budget Check
+    # 3. Budget Check
     if cost is not None and available_budget is not None:
         cost_val = float(cost)
         avail_val = float(available_budget)
@@ -88,7 +101,7 @@ def check_policy_and_approvals(
             if not any(a["role"] == "Finance" for a in approvals):
                 approvals.append({"role": "Finance", "reason": "Budget exception approval required due to insufficient funds"})
 
-    # 3. Security Review
+    # 4. Security Review
     data_sens_norm = str(data_sensitivity).strip().lower() if data_sensitivity else ""
     vendor_stat_norm = str(vendor_status).strip().lower() if vendor_status else ""
 
@@ -148,7 +161,7 @@ def check_policy_and_approvals(
                 "reason": "; ".join(security_reasons),
             })
 
-    # 4. Privacy Review
+    # 5. Privacy Review
     privacy_needed = False
     privacy_reasons: list[str] = []
 
@@ -169,7 +182,7 @@ def check_policy_and_approvals(
             "reason": "; ".join(privacy_reasons),
         })
 
-    # 5. Legal Review
+    # 6. Legal Review
     legal_needed = False
     legal_reasons: list[str] = []
 
@@ -197,7 +210,7 @@ def check_policy_and_approvals(
             "reason": "; ".join(legal_reasons),
         })
 
-    # 6. Existing Tool Overlap Flag
+    # 7. Existing Tool Overlap Flag
     if has_tool_overlap:
         risk_flags.append({
             "flag": "existing_tool_overlap",
@@ -205,7 +218,7 @@ def check_policy_and_approvals(
             "reason": "Existing alternative software or enterprise capacity detected in catalog",
         })
 
-    # 7. Prompt Injection Flag
+    # 8. Prompt Injection Flag
     if has_prompt_injection:
         risk_flags.append({
             "flag": "prompt_injection_detected",

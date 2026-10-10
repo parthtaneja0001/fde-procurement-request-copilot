@@ -41,6 +41,7 @@ def run_staged_agents_pipeline(request: dict[str, Any], llm_client: LLMClient | 
     product_name = request.get("product_name", "")
     category = request.get("category", "")
     cost = request.get("annual_cost_usd")
+    user_count = request.get("user_count")
     data_access = request.get("data_access_level", "")
     justification = request.get("business_justification", "")
 
@@ -101,6 +102,7 @@ def run_staged_agents_pipeline(request: dict[str, Any], llm_client: LLMClient | 
     # 3. Deterministic Policy Calculation
     policy_res = check_policy_and_approvals(
         cost=cost,
+        user_count=user_count,
         category=category,
         data_sensitivity=data_access,
         vendor_status=v_stat,
@@ -114,13 +116,14 @@ def run_staged_agents_pipeline(request: dict[str, Any], llm_client: LLMClient | 
         vendor_api_unavailable=v_api_down,
         has_prompt_injection=has_injection,
         has_tool_overlap=has_overlap,
+        is_employee_missing=not emp_res["ok"],
     )
     executed_tools[policy_res["tool_call_id"]] = policy_res
     tool_names.append("check_policy_and_approvals")
 
     # Build Grounded Evidence Items for All Core Tools
     grounded_evidence: list[EvidenceItem] = []
-    if emp_res["ok"] and emp_res.get("data", {}).get("department_budget"):
+    if emp_res["ok"] and (emp_res.get("data") or {}).get("department_budget"):
         grounded_evidence.append(
             EvidenceItem(
                 claim=f"Department {dept_name} software budget available: ${avail_budget:,.2f}",
@@ -129,6 +132,16 @@ def run_staged_agents_pipeline(request: dict[str, Any], llm_client: LLMClient | 
                 value=emp_res["data"]["department_budget"],
             )
         )
+    else:
+        grounded_evidence.append(
+            EvidenceItem(
+                claim=f"Employee lookup: {emp_res.get('error') or 'Employee valid'}",
+                tool_call_id=emp_res["tool_call_id"],
+                source_tool="get_employee_and_budget",
+                value=emp_res.get("data") or emp_res.get("error"),
+            )
+        )
+
     if cat_res["ok"] and cat_res.get("data"):
         alts = cat_res["data"].get("potential_alternatives", [])
         grounded_evidence.append(
@@ -161,12 +174,12 @@ def run_staged_agents_pipeline(request: dict[str, Any], llm_client: LLMClient | 
     # Assemble Structured Evidence Pack (Agent 1 Output)
     evidence_pack = StructuredEvidencePack(
         request_id=req_id,
-        requester_summary=emp_res.get("data", {}).get("employee", {}),
-        budget_summary=emp_res.get("data", {}).get("department_budget", {}),
-        catalog_overlap_summary=cat_res.get("data", {}).get("potential_alternatives", []),
-        vendor_risk_summary=vend_res.get("data", {}),
-        purchase_history_summary=hist_res.get("data", {}).get("purchases", []),
-        identified_missing_fields=policy_res.get("data", {}).get("missing_fields", []),
+        requester_summary=(emp_res.get("data") or {}).get("employee", {}),
+        budget_summary=(emp_res.get("data") or {}).get("department_budget", {}),
+        catalog_overlap_summary=(cat_res.get("data") or {}).get("potential_alternatives", []),
+        vendor_risk_summary=vend_res.get("data") or {},
+        purchase_history_summary=(hist_res.get("data") or {}).get("purchases", []),
+        identified_missing_fields=(policy_res.get("data") or {}).get("missing_fields", []),
         grounded_evidence=grounded_evidence,
     )
 

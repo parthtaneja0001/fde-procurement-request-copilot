@@ -118,9 +118,6 @@ def get_vendor_security_status(
                 is_expired = True
         except Exception:
             is_expired = True
-    else:
-        if api_data.get("security_review_status") != "approved":
-            is_expired = True
 
     if api_data.get("security_review_status") == "expired":
         is_expired = True

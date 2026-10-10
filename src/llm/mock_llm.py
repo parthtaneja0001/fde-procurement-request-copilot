@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import json
 from typing import Any
-from src.contracts import ProcurementDecision, RecommendationEnum, RiskFlagItem, EvidenceItem, ApprovalRequirement, SeverityEnum
+from src.contracts import RecommendationEnum
 
 
 def generate_mock_procurement_decision(
@@ -31,17 +30,14 @@ def generate_mock_procurement_decision(
     if not data_access or data_access == "unknown":
         missing_info.append("Specific data-access level and integration scope")
 
-    # Find relevant tool call ids
-    budget_cid = None
-    catalog_cid = None
-    vendor_cid = None
-    history_cid = None
+    catalog_alts = []
 
     for cid, t_env in executed_tools.items():
         src = t_env.get("source")
+        data_block = t_env.get("data") or {}
+
         if src == "get_employee_and_budget":
-            budget_cid = cid
-            b_data = t_env.get("data", {}).get("department_budget")
+            b_data = data_block.get("department_budget")
             if b_data:
                 evidence_items.append({
                     "claim": f"Department available software budget is ${b_data.get('available_usd', 0):,.2f}",
@@ -50,9 +46,8 @@ def generate_mock_procurement_decision(
                     "value": b_data,
                 })
         elif src == "search_software_catalog":
-            catalog_cid = cid
-            c_data = t_env.get("data", {})
-            matches = c_data.get("potential_alternatives", [])
+            matches = data_block.get("potential_alternatives", [])
+            catalog_alts = matches
             if matches:
                 top = matches[0]
                 evidence_items.append({
@@ -62,8 +57,6 @@ def generate_mock_procurement_decision(
                     "value": top,
                 })
         elif src == "get_vendor_security_status":
-            vendor_cid = cid
-            v_data = t_env.get("data", {})
             if not t_env.get("ok"):
                 evidence_items.append({
                     "claim": f"Vendor security risk service is unavailable for {vendor_name}",
@@ -73,39 +66,43 @@ def generate_mock_procurement_decision(
                 })
             else:
                 evidence_items.append({
-                    "claim": f"Vendor security status is {v_data.get('security_review_status')} (expired: {v_data.get('is_review_expired')})",
+                    "claim": f"Vendor security status is {data_block.get('security_review_status')} (expired: {data_block.get('is_review_expired')})",
                     "tool_call_id": cid,
                     "source_tool": src,
-                    "value": v_data,
+                    "value": data_block,
                 })
         elif src == "get_purchase_history":
-            history_cid = cid
-            h_data = t_env.get("data", {})
-            if h_data.get("is_existing_purchase"):
+            if data_block.get("is_existing_purchase"):
                 evidence_items.append({
-                    "claim": f"Existing company purchase record exists: {h_data.get('existing_purchase_summary')}",
+                    "claim": f"Existing company purchase record exists: {data_block.get('existing_purchase_summary')}",
                     "tool_call_id": cid,
                     "source_tool": src,
-                    "value": h_data.get("existing_purchase_summary"),
+                    "value": data_block.get("existing_purchase_summary"),
                 })
 
-    # Catalog overlap check
+    # Exact duplication check:
+    # A true duplicate replacement (USE_EXISTING_TOOL) is when the request is for a new duplicate tool
+    # (e.g. TaskFlow Pro or WikiSpace) when the company already has full enterprise capacity,
+    # and NOT an authorized expansion, add-on, training, or tier increase.
     is_overlap = False
-    if "TaskFlow" in product_name:
+    overlap_product = ""
+    prod_lower = product_name.lower()
+
+    if "taskflow pro" in prod_lower or "wikispace" in prod_lower or ("project management" in category.lower() and "taskflow" in prod_lower and "add-on" not in prod_lower):
         is_overlap = True
-        risk_flags.append({"flag": "existing_tool_overlap", "severity": "MEDIUM", "evidence_ref": catalog_cid})
+        overlap_product = "TaskFlow" if "taskflow" in prod_lower else "DocSpace"
 
     # Recommendation determination
     if missing_info:
-        rec = "NEEDS_MORE_INFO"
+        rec = RecommendationEnum.NEEDS_MORE_INFO
         rationale = "Request is missing material cost, seat count, or data access parameters."
         next_step = "Request clarification from requester regarding missing details."
     elif is_overlap:
-        rec = "USE_EXISTING_TOOL"
-        rationale = f"An enterprise license for {product_name} already exists in the company catalog."
-        next_step = "Direct requester to access existing company license capacity."
+        rec = RecommendationEnum.USE_EXISTING_TOOL
+        rationale = f"An enterprise license for {overlap_product or product_name} already exists in the company catalog."
+        next_step = f"Direct requester to access existing company license for {overlap_product or product_name}."
     else:
-        rec = "APPROVE_TO_PROCEED"
+        rec = RecommendationEnum.APPROVE_TO_PROCEED
         rationale = f"Request for {product_name} meets standard operational criteria."
         next_step = "Submit to required departmental approvers."
 

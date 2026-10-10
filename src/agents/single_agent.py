@@ -25,6 +25,7 @@ def run_single_agent_pipeline(request: dict[str, Any], llm_client: LLMClient | N
     product_name = request.get("product_name", "")
     category = request.get("category", "")
     cost = request.get("annual_cost_usd")
+    user_count = request.get("user_count")
     data_access = request.get("data_access_level", "")
     justification = request.get("business_justification", "")
 
@@ -86,6 +87,7 @@ def run_single_agent_pipeline(request: dict[str, Any], llm_client: LLMClient | N
     # 3. Deterministic Policy Calculation
     policy_res = check_policy_and_approvals(
         cost=cost,
+        user_count=user_count,
         category=category,
         data_sensitivity=data_access,
         vendor_status=v_stat,
@@ -99,6 +101,7 @@ def run_single_agent_pipeline(request: dict[str, Any], llm_client: LLMClient | N
         vendor_api_unavailable=v_api_down,
         has_prompt_injection=has_injection,
         has_tool_overlap=has_overlap,
+        is_employee_missing=not emp_res["ok"],
     )
     executed_tools[policy_res["tool_call_id"]] = policy_res
     tool_names.append("check_policy_and_approvals")
@@ -134,14 +137,14 @@ Remember to cite real tool_call_id references in every evidence item.
     grounded_evidence: list[EvidenceItem] = list(candidate.evidence)
     existing_cids = {e.tool_call_id for e in grounded_evidence}
 
-    if emp_res["tool_call_id"] not in existing_cids and emp_res.get("data"):
-        b_val = emp_res["data"].get("department_budget", {})
+    if emp_res["tool_call_id"] not in existing_cids:
+        b_val = (emp_res.get("data") or {}).get("department_budget", {})
         grounded_evidence.append(
             EvidenceItem(
-                claim=f"Department {dept_name} software budget available: ${b_val.get('available_usd', 0):,.2f}",
+                claim=f"Department {dept_name or 'lookup'}: ${b_val.get('available_usd', 0):,.2f} available" if emp_res["ok"] else f"Employee lookup failed: {emp_res.get('error')}",
                 tool_call_id=emp_res["tool_call_id"],
                 source_tool="get_employee_and_budget",
-                value=b_val,
+                value=b_val if emp_res["ok"] else emp_res.get("error"),
             )
         )
     if cat_res["tool_call_id"] not in existing_cids and cat_res.get("data"):
