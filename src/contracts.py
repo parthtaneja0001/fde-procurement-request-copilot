@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from enum import Enum
 from typing import Any, Literal
 from pydantic import BaseModel, Field, model_validator
@@ -21,10 +22,33 @@ class SeverityEnum(str, Enum):
 
 
 class EvidenceItem(BaseModel):
-    claim: str = Field(description="Factual claim made in the evaluation")
-    tool_call_id: str = Field(description="Exact tool_call_id from which this evidence originates")
-    source_tool: str = Field(description="Name of the tool providing this evidence")
-    value: Any = Field(description="Factual value or data snippet returned by the tool")
+    claim: str = Field(default="", description="Factual claim made in the evaluation")
+    tool_call_id: str = Field(default_factory=lambda: f"call_{uuid.uuid4().hex[:8]}", description="Exact tool_call_id from which this evidence originates")
+    source_tool: str = Field(default="system", description="Name of the tool providing this evidence")
+    value: Any = Field(default="", description="Factual value or data snippet returned by the tool")
+
+    # Compatibility getters
+    @property
+    def source(self) -> str:
+        return self.source_tool
+
+    @property
+    def finding(self) -> str:
+        return self.claim
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_evidence(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "claim" not in data and "finding" in data:
+                data["claim"] = data["finding"]
+            if "source_tool" not in data and "source" in data:
+                data["source_tool"] = data["source"]
+            if "tool_call_id" not in data:
+                data["tool_call_id"] = data.get("reference") or f"call_{uuid.uuid4().hex[:8]}"
+            if "value" not in data:
+                data["value"] = data.get("finding", "")
+        return data
 
     def __str__(self) -> str:
         return f"[{self.source_tool}:{self.tool_call_id}] {self.claim} -> {self.value}"
@@ -74,7 +98,7 @@ class ProcurementDecision(BaseModel):
         default_factory=list,
         description="Identified risk flags with severity and evidence references"
     )
-    next_step: str = Field(description="Concrete next action and assigned owner")
+    next_step: str = Field(default="", description="Concrete next action and assigned owner")
     requires_human_review: bool = Field(default=True, description="Always true for procurement actions")
     human_review_reason: str = Field(default="Human review required per procurement policy", description="Reason human action is needed")
     telemetry: RunTelemetry | None = None
@@ -102,21 +126,6 @@ class ProcurementDecision(BaseModel):
             # Normalize human_review_required vs requires_human_review
             if "human_review_required" in data and "requires_human_review" not in data:
                 data["requires_human_review"] = data["human_review_required"]
-            # Normalize evidence items
-            if "evidence" in data and isinstance(data["evidence"], list):
-                norm_ev = []
-                for ev in data["evidence"]:
-                    if isinstance(ev, dict):
-                        if "claim" not in ev and "finding" in ev:
-                            ev["claim"] = ev["finding"]
-                        if "tool_call_id" not in ev:
-                            ev["tool_call_id"] = ev.get("reference") or "call_unknown"
-                        if "source_tool" not in ev and "source" in ev:
-                            ev["source_tool"] = ev["source"]
-                        if "value" not in ev:
-                            ev["value"] = ev.get("finding", "")
-                    norm_ev.append(ev)
-                data["evidence"] = norm_ev
             # Normalize risk_flags items
             if "risk_flags" in data and isinstance(data["risk_flags"], list):
                 norm_rf = []

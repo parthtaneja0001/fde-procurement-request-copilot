@@ -17,8 +17,8 @@
 | **Escalation Precision** | 100.0% | 100.0% | Tied |
 | **Escalation Recall** | 100.0% | 100.0% | Tied |
 | **False-Negative Escalations** | **0** (Zero missed) | **0** (Zero missed) | **Zero Security/Budget Breaches** |
-| **Mean Latency** | **63.5 ms** | **64.4 ms** | **Architecture A is 0.9 ms faster** |
-| **P95 Latency** | 69.4 ms | 68.6 ms | Architecture A is faster |
+| **Mean Latency** | **63.0 ms** | **63.8 ms** | **Architecture A is 0.8 ms faster** |
+| **P95 Latency** | 67.4 ms | 68.6 ms | Architecture A is faster |
 | **Avg LLM Calls / Request** | **1.0** | **1.0** | **Architecture A uses 50% fewer LLM calls** |
 | **Avg Tool Calls / Request** | 5.0 | 5.0 | Equal |
 
@@ -28,15 +28,15 @@
 
 | Category | Total Cases | Architecture A Pass Rate | Architecture B Pass Rate | Arch A Mean Latency | Arch B Mean Latency |
 |---|---|---|---|---|---|
-| `clean_happy_path` | 4 | 100.0% (4/4) | 100.0% (4/4) | 66.3 ms | 60.0 ms |
-| `conflicting_expired_vendor` | 3 | 100.0% (3/3) | 100.0% (3/3) | 60.5 ms | 63.1 ms |
-| `existing_tool_overlap` | 3 | 100.0% (3/3) | 100.0% (3/3) | 60.7 ms | 62.4 ms |
-| `incomplete_request` | 3 | 100.0% (3/3) | 100.0% (3/3) | 62.6 ms | 62.2 ms |
-| `over_budget` | 3 | 100.0% (3/3) | 100.0% (3/3) | 62.6 ms | 66.4 ms |
-| `prompt_injection` | 3 | 100.0% (3/3) | 100.0% (3/3) | 67.5 ms | 68.2 ms |
-| `security_sensitive_thresholds` | 8 | 100.0% (8/8) | 100.0% (8/8) | 63.0 ms | 64.1 ms |
-| `tool_api_unavailable` | 3 | 100.0% (3/3) | 100.0% (3/3) | 65.5 ms | 68.8 ms |
-| `unknown_entity` | 2 | 100.0% (2/2) | 100.0% (2/2) | 62.9 ms | 66.3 ms |
+| `clean_happy_path` | 4 | 100.0% (4/4) | 100.0% (4/4) | 63.1 ms | 62.3 ms |
+| `conflicting_expired_vendor` | 3 | 100.0% (3/3) | 100.0% (3/3) | 62.5 ms | 62.1 ms |
+| `existing_tool_overlap` | 3 | 100.0% (3/3) | 100.0% (3/3) | 63.7 ms | 63.6 ms |
+| `incomplete_request` | 3 | 100.0% (3/3) | 100.0% (3/3) | 61.5 ms | 64.3 ms |
+| `over_budget` | 3 | 100.0% (3/3) | 100.0% (3/3) | 61.8 ms | 62.9 ms |
+| `prompt_injection` | 3 | 100.0% (3/3) | 100.0% (3/3) | 64.9 ms | 64.4 ms |
+| `security_sensitive_thresholds` | 8 | 100.0% (8/8) | 100.0% (8/8) | 63.5 ms | 64.7 ms |
+| `tool_api_unavailable` | 3 | 100.0% (3/3) | 100.0% (3/3) | 63.4 ms | 63.2 ms |
+| `unknown_entity` | 2 | 100.0% (2/2) | 100.0% (2/2) | 61.6 ms | 66.6 ms |
 
 ---
 

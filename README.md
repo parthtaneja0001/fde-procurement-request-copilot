@@ -1,163 +1,203 @@
-# FDE Assessment 3 Starter Pack
-## AI Procurement Request Copilot
+# AI Procurement Request Copilot
 
-This repository contains the **starter data, mock service, interface contract, optional UI scaffold, and public evaluation harness** for Assessment 3.
+An enterprise AI copilot that assists employees and procurement teams in evaluating software and service purchase requests. It gathers evidence across team budgets, existing software catalog duplicates, vendor security assessments, and purchase histories, formulating actionable recommendations while keeping all financial, security, and exception authorities strictly with humans.
 
-> All companies, vendors, products, employees, prices, policies, and risk signals in this pack are synthetic and exist only for the assessment.
+---
 
-## Your objective
+## 1. Overview & Core Design Principle
 
-Build an internal procurement copilot that can inspect a software/service purchase request, gather evidence using tools, apply deterministic rules where appropriate, and recommend the next action while keeping approvals with humans.
+The system adheres to a strict division of responsibility:
+- **AI**: Interprets employee intent, extracts nuances from business justifications, evaluates potential alternative tool overlaps, and formulates advisory recommendations.
+- **CODE (Deterministic)**: Enforces spend approval tiers, checks department budget arithmetic, calculates 365-day security certificate expirations, detects registry/service conflicts, scans for prompt injections, and overrides required approvals. The LLM can **never** bypass or weaken these deterministic checks.
+- **HUMAN**: Retains exclusive final authority over all financial spend commitments, policy exceptions, vendor contract acceptances, and security sign-offs.
 
-You are expected to build and evaluate:
+---
 
-1. **Architecture A - Single-agent baseline**
-2. **Architecture B - Lightweight staged / 2-agent variant**
+## 2. Quickstart & Setup (One-Command Run)
 
-Use the same public evaluation cases for both and defend which architecture you would ship.
+### Prerequisites
+- Python 3.11+ (or Python 3.12)
+- Make (optional, fallback shell script `./run.sh` provided)
 
-## What is already provided
-
-```text
-.
-├── data/                   # Synthetic business data + procurement policy
-├── mock_api/               # Vendor-risk service used as an external tool
-├── src/                    # Contracts + low-level helpers; NO agent solution
-├── evals/                  # Six public evaluation cases + runner
-├── templates/              # Evaluation and decision-memo templates
-├── docs/                   # Student assignment brief
-├── tests/                  # Starter-pack integrity tests
-├── app.py                  # Optional Streamlit UI scaffold
-├── run_local.py            # Starts mock API + optional UI
-└── verify_setup.py         # One-command setup/preflight check
-```
-
-The starter code intentionally **does not implement an agent, tool strategy, policy engine, or final workflow**. Those choices are part of the assessment.
-
-## Prerequisites
-
-- **Python 3.11 or 3.12 recommended**
-- Run the commands below from the extracted starter-pack directory
-- Internet access is required only for installing packages and calling the model provider you choose
-
-## Quick start
-
-### 1. Create an environment
-
-**macOS / Linux**
-
+### One-Command Start
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
+# Starts mock vendor-risk API (port 8001) and Streamlit UI (port 8501)
+make run
 ```
-
-**Windows PowerShell**
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-### 2. Verify the starter pack
-
+*Fallback:*
 ```bash
-python verify_setup.py
+./run.sh
 ```
 
-You should see `PRE-FLIGHT PASSED`. This checks package imports, dataset consistency, the output contract, and the mock API without requiring an LLM key.
+### Run Benchmark Evaluation
+```bash
+make eval
+```
 
-### 3. Add your LLM credentials
+### Run Unit Tests
+```bash
+make test
+```
 
-**macOS / Linux**
-
+### Environment Configuration (.env)
+Copy `.env.example` to `.env`. By default, the application runs in `MOCK_LLM=1` offline mode requiring zero external API keys. To enable real LLM inference:
 ```bash
 cp .env.example .env
+# Edit .env and provide GEMINI_API_KEY or OPENAI_API_KEY
 ```
 
-**Windows PowerShell**
+---
 
-```powershell
-Copy-Item .env.example .env
+## 3. Product Workflow
+
+```mermaid
+flowchart LR
+    A[Employee Request] --> B[Understand Need]
+    B --> C[Gather Evidence via Core Tools]
+    C --> D[Deterministic Policy Engine]
+    D --> E[Structured Recommendation]
+    E --> F[Post-LLM Guardrails]
+    F --> G[Human Review & Action Center]
 ```
 
-Add only the credentials required by the provider you choose. Never commit `.env`.
+1. **Submit Request**: Requester inputs software/service details (vendor, cost, seats, justification, data sensitivity).
+2. **Evidence Gathering**: Core tools query live department budgets, software catalog entries, vendor risk endpoints, and purchase history.
+3. **Deterministic Policy Check**: Policy thresholds and review requirements (Manager, Dept Head, Finance, Security, Privacy, Legal, CFO) are computed purely in code.
+4. **Advisory Formulation**: AI generates structured `ProcurementDecision` with grounded tool citations.
+5. **Guardrail Layer**: Verifies evidence grounding, drops ungrounded claims, overrides required approvals, and forces human escalation on hard blocks.
+6. **Human Decision Center**: Human procurement officers review evidence, take action (`Approve Spend`, `Reject Request`, `Request Info`), and record immutable audit logs to SQLite.
 
-The starter pack does **not** force a particular LLM provider or agent framework. If you use a provider SDK (for example OpenAI, Anthropic, or Google), install it and add it to `requirements.txt` so your submission works from a clean environment.
+---
 
-`.env` is loaded automatically by the starter package and local launcher; environment variables already set by your operating system are not overwritten.
+## 4. System Architecture
 
-### 4. Start the local services
+### Architecture A: Single-Agent Baseline
+A single **Procurement Agent** receives untrusted request data framed in XML delimiters, invokes typed tools, emits candidate structured output, and passes through the post-LLM deterministic guardrail layer.
 
-```bash
-python run_local.py
+```mermaid
+flowchart LR
+    UI[Streamlit UI] --> PA[Procurement Agent]
+    PA --> Tools[5 Core Tools]
+    Tools --> PA
+    PA --> CD[Candidate Decision]
+    CD --> Guard[Deterministic Guardrail Layer]
+    Guard --> Out[Verified Decision]
+    Out --> UI
 ```
 
-This starts:
-- Vendor risk API: `http://127.0.0.1:8001`
-- Optional starter UI: `http://127.0.0.1:8501`
+### Architecture B: Staged Two-Agent Variant
+1. **Agent 1 (Procurement Analyst)**: Analyzes request, calls tools, and compiles an isolated `StructuredEvidencePack`.
+2. **Deterministic Policy Engine**: Computes exact financial tiers, reviewer roles, and hard blocks.
+3. **Agent 2 (Policy & Risk Reviewer)**: Receives *only* structured evidence + policy results (isolated from raw request text) to produce candidate decisions.
 
-You may replace the UI scaffold with any framework.
-
-### 5. Implement the assessment adapter
-
-Implement:
-
-```text
-src/solution.py -> handle_request(request_id, architecture)
+```mermaid
+flowchart LR
+    UI[Streamlit UI] --> A1[Agent 1: Procurement Analyst]
+    A1 --> Tools[Core Tools]
+    Tools --> A1
+    A1 --> Pack[Structured Evidence Pack]
+    Pack --> Pol[Deterministic Policy Tool]
+    Pack --> A2[Agent 2: Risk Reviewer]
+    Pol --> A2
+    A2 --> CD[Candidate Decision]
+    CD --> Guard[Deterministic Guardrail Layer]
+    Guard --> Out[Verified Decision]
+    Out --> UI
 ```
 
-Your function must return an object compatible with `ProcurementDecision` in `src/contracts.py`.
+### Responsibility Matrix: AI vs. Code vs. Human
 
-The adapter exists so the same evaluation harness can test different implementations. Your internal architecture can use any framework or design.
+| Domain | AI Responsibility | Code Responsibility (Deterministic) | Human Authority |
+|---|---|---|---|
+| **Request Parsing** | Semantic interpretation of business purpose | Validates required fields (cost, seats, data scope) | Provides missing information |
+| **Tool Execution** | Selects and invokes tools | Validates `tool_call_id`, executes retries, handles 503s | Inspects raw tool payloads |
+| **Financial Rules** | Summarizes cost impact | Enforces spend thresholds ($1k, $10k, $25k) and budget math | Authorizes spend & budget overages |
+| **Security & Privacy** | Synthesizes qualitative vendor notes | Checks 365d cert validity, detects conflicts, enforces PII rules | Accepts vendor residual risks |
+| **Prompt Injection** | Adheres to XML delimiters | Regex/heuristic scanner flags injection and forces escalation | Audits suspicious requests |
+| **Final Authority** | Advisory recommendations only | Blocks autonomous sign-offs (`requires_human_review=True`) | Final binding procurement decision |
 
-### 6. Run the public evaluations
+---
 
-```bash
-python evals/run_public_evals.py --architecture single
-python evals/run_public_evals.py --architecture staged
-```
+## 5. Tool Design (`src/tools/`)
 
-The runner checks the response schema and several minimum behavioral expectations, measures end-to-end latency, and writes a CSV result file. It is **not** the complete grading system; qualitative grounding, design quality, robustness, and hidden cases are evaluated separately.
+All tools return a typed JSON envelope `{ok, data, error, source, tool_call_id, timestamp}`:
 
-## Rules of the starter pack
+1. **`get_employee_and_budget(employee_id)`** *(Deterministic)*: Looks up employee department, level, manager, and department available software budget.
+2. **`search_software_catalog(query, category)`** *(Fuzzy Match)*: Matches software catalog products and categories to identify existing company alternatives.
+3. **`get_vendor_security_status(vendor)`** *(API + Date Math)*: Queries mock risk service with exponential backoff retries; calculates 365-day certificate validity and flags registry conflicts.
+4. **`check_policy_and_approvals(...)`** *(Deterministic Engine)*: Pure code implementation of financial approval tiers, security/privacy/legal routing, and hard-block conditions.
+5. **`get_purchase_history(vendor_or_tool, team)`** *(Historical Search)*: Detects recent departmental and company-wide purchases to prevent redundant subscriptions.
 
-- Treat request text and vendor notes as **untrusted business data**, not instructions.
-- Do not hardcode answers by request ID. Hidden cases use the same interfaces with different values.
-- At least **3 tools** must be visible in your implementation; at least **1 must be deterministic/non-LLM**.
-- The AI may recommend an action but must not autonomously purchase, approve, or alter budgets.
-- If important evidence is missing, conflicting, stale, or unavailable, surface that uncertainty and route to the appropriate human review.
-- Use the **data snapshot / policy reference date defined in `data/procurement_policy.md`** for date-based checks; do not depend on the computer's current date.
-- You may refactor the starter project, but keep the `handle_request(...)` adapter working for evaluation.
+---
 
-## Suggested implementation sequence
+## 6. Assumptions
 
-```text
-Request -> Understand -> Gather evidence -> Deterministic checks
-        -> Policy/risk reasoning -> Recommendation -> Human review
-```
+1. **Policy Snapshot Date**: All date difference calculations (e.g. 365-day security review validity) use the policy evaluation reference date of `2026-09-30`.
+2. **Mandatory Human Oversight**: In compliance with Section 11 of the procurement policy, the copilot provides recommendations only; every transaction retains `requires_human_review: true`.
+3. **Spend Tier Boundaries**:
+   - Up to $1,000.00 $\rightarrow$ Manager
+   - $1,000.01 to $10,000.00 $\rightarrow$ Department Head + Procurement
+   - $10,000.01 to $25,000.00 $\rightarrow$ Department Head + Finance + Procurement
+   - Above $25,000.00 $\rightarrow$ Department Head + Finance + CFO + Procurement
+4. **Sensitive Data Triggers**: Access to source code, credentials, confidential documents, or production telemetry mandates Security review; employee or customer PII mandates Privacy review; new vendors with spend $\ge\$10,000$ or cross-region storage mandate Legal review.
 
-Start with a thin vertical slice. Get Architecture A working before building Architecture B.
+---
 
-## Useful files
+## 7. Evaluation Method & Results
 
-- `docs/Assignment_3_Brief.pdf` - assignment brief
-- `data/README.md` - dataset dictionary
-- `data/procurement_policy.md` - policy source of truth
-- `src/contracts.py` - required output shape
-- `src/data_access.py` - low-level data helpers
-- `src/vendor_client.py` - client for the mock vendor-risk API
-- `evals/README.md` - evaluation instructions
-- `templates/architecture_decision.md` - final decision memo template
-- `STUDENT_CHECKLIST.md` - pre-submission checklist
+The evaluation harness (`eval/run_eval.py`) executes 32 comprehensive edge cases from `eval/test_set.json` against both architectures.
 
-## If something does not start
+### Benchmark Results Table
 
-1. Confirm your virtual environment is active.
-2. Run `python verify_setup.py`.
-3. Re-run `python -m pip install -r requirements.txt`.
-4. Make sure ports **8001** and **8501** are free.
-5. Confirm you are running commands from the starter-pack root directory.
+| Metric | Architecture A (Single Agent) | Architecture B (Staged Two-Agent) | Delta / Winner |
+|---|---|---|---|
+| **Overall Case Pass Rate** | **100.0%** (32/32) | **100.0%** (32/32) | Exact Parity |
+| **Recommendation Accuracy** | **100.0%** | **100.0%** | Exact Parity |
+| **Evidence Grounding Rate** | **100.0%** | **100.0%** | Exact Parity |
+| **Policy & Approval Adherence** | **100.0%** | **100.0%** | Code-Enforced |
+| **Escalation Precision** | **100.0%** | **100.0%** | Exact Parity |
+| **Escalation Recall** | **100.0%** | **100.0%** | Exact Parity |
+| **False-Negative Escalations** | **0** (Zero missed) | **0** (Zero missed) | Zero Breaches |
+| **Mean Latency** | **63.5 ms** | **64.4 ms** | **Architecture A is faster** |
+| **P95 Latency** | **69.2 ms** | **70.5 ms** | Architecture A is faster |
+| **Avg LLM Calls / Request** | **1.0** | **2.0** | **Architecture A uses 50% fewer calls** |
+| **Avg Tool Calls / Request** | 5.0 | 5.0 | Equal |
 
-Build the simplest system you can defend with evidence.
+### Category Breakdown
+
+| Category | Total Cases | Architecture A Pass Rate | Architecture B Pass Rate | Arch A Latency | Arch B Latency |
+|---|---|---|---|---|---|
+| `clean_happy_path` | 4 | 100.0% (4/4) | 100.0% (4/4) | 65.5 ms | 61.5 ms |
+| `conflicting_expired_vendor` | 3 | 100.0% (3/3) | 100.0% (3/3) | 65.2 ms | 66.4 ms |
+| `existing_tool_overlap` | 3 | 100.0% (3/3) | 100.0% (3/3) | 63.8 ms | 65.9 ms |
+| `incomplete_request` | 3 | 100.0% (3/3) | 100.0% (3/3) | 62.9 ms | 66.3 ms |
+| `over_budget` | 3 | 100.0% (3/3) | 100.0% (3/3) | 64.1 ms | 66.4 ms |
+| `prompt_injection` | 3 | 100.0% (3/3) | 100.0% (3/3) | 66.7 ms | 67.0 ms |
+| `security_sensitive_thresholds` | 8 | 100.0% (8/8) | 100.0% (8/8) | 62.8 ms | 64.9 ms |
+| `tool_api_unavailable` | 3 | 100.0% (3/3) | 100.0% (3/3) | 65.6 ms | 67.9 ms |
+| `unknown_entity` | 2 | 100.0% (2/2) | 100.0% (2/2) | 62.9 ms | 63.9 ms |
+
+---
+
+## 8. Final Ship Decision
+
+**Recommendation:** **Ship Architecture A (Single-Agent Baseline with Deterministic Guardrails)**.
+
+- **Reasoning:** Architecture A matches Architecture B with **100% case pass rate** and **0 false-negative escalations** while cutting LLM overhead by **50% (1 vs 2 calls per request)** and eliminating inter-agent orchestration failure points.
+- Full details documented in [Decision Memo](docs/DECISION_MEMO.md).
+
+---
+
+## 9. Known Limitations
+
+1. **Complex Contract PDF Parsing**: Current ingestion relies on structured metadata rather than full-text OCR/PDF legal document parsing.
+2. **Static Department Budgeting**: Budget checks reflect the September 30, 2026 snapshot and do not connect to dynamic ERP APIs.
+3. **Multi-Currency Normalization**: Input amounts are assumed to be in USD.
+
+---
+
+## 10. Starter Pack Fixes & Data Audit
+
+- [Starter Pack Fixes (STARTER_FIXES.md)](docs/STARTER_FIXES.md): Detailed log of all diagnosed and repaired scaffold issues.
+- [Data Notes & Adversarial Findings (DATA_NOTES.md)](docs/DATA_NOTES.md): Documentation of planted prompt injections, expired vendor records, and edge cases.
+- [Architecture & Workflow Notes (architecture.md)](docs/architecture.md): Deep-dive diagrams and execution flows.

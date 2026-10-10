@@ -11,8 +11,8 @@
     "escalation_recall_pct": 100.0,
     "false_negative_escalations": 0,
     "false_positive_escalations": 0,
-    "mean_latency_ms": 63.5,
-    "p95_latency_ms": 69.4,
+    "mean_latency_ms": 63.0,
+    "p95_latency_ms": 67.4,
     "avg_llm_calls": 1.0,
     "avg_tool_calls": 5.0,
     "category_breakdown": {
@@ -20,55 +20,55 @@
         "total": 4,
         "passed": 4,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 66.3
+        "mean_latency_ms": 63.1
       },
       "incomplete_request": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 62.6
+        "mean_latency_ms": 61.5
       },
       "existing_tool_overlap": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 60.7
+        "mean_latency_ms": 63.7
       },
       "conflicting_expired_vendor": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 60.5
+        "mean_latency_ms": 62.5
       },
       "security_sensitive_thresholds": {
         "total": 8,
         "passed": 8,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 63.0
+        "mean_latency_ms": 63.5
       },
       "prompt_injection": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 67.5
+        "mean_latency_ms": 64.9
       },
       "tool_api_unavailable": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 65.5
+        "mean_latency_ms": 63.4
       },
       "over_budget": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 62.6
+        "mean_latency_ms": 61.8
       },
       "unknown_entity": {
         "total": 2,
         "passed": 2,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 62.9
+        "mean_latency_ms": 61.6
       }
     },
     "failures": []
@@ -85,7 +85,7 @@
     "escalation_recall_pct": 100.0,
     "false_negative_escalations": 0,
     "false_positive_escalations": 0,
-    "mean_latency_ms": 64.4,
+    "mean_latency_ms": 63.8,
     "p95_latency_ms": 68.6,
     "avg_llm_calls": 1.0,
     "avg_tool_calls": 5.0,
@@ -94,55 +94,55 @@
         "total": 4,
         "passed": 4,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 60.0
+        "mean_latency_ms": 62.3
       },
       "incomplete_request": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 62.2
+        "mean_latency_ms": 64.3
       },
       "existing_tool_overlap": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 62.4
+        "mean_latency_ms": 63.6
       },
       "conflicting_expired_vendor": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 63.1
+        "mean_latency_ms": 62.1
       },
       "security_sensitive_thresholds": {
         "total": 8,
         "passed": 8,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 64.1
+        "mean_latency_ms": 64.7
       },
       "prompt_injection": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 68.2
+        "mean_latency_ms": 64.4
       },
       "tool_api_unavailable": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 68.8
+        "mean_latency_ms": 63.2
       },
       "over_budget": {
         "total": 3,
         "passed": 3,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 66.4
+        "mean_latency_ms": 62.9
       },
       "unknown_entity": {
         "total": 2,
         "passed": 2,
         "accuracy_pct": 100.0,
-        "mean_latency_ms": 66.3
+        "mean_latency_ms": 66.6
       }
     },
     "failures": []
