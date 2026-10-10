@@ -1,46 +1,132 @@
 from __future__ import annotations
 
-from typing import Literal
-from pydantic import BaseModel, Field
+from enum import Enum
+from typing import Any, Literal
+from pydantic import BaseModel, Field, model_validator
+
+
+class RecommendationEnum(str, Enum):
+    APPROVE_TO_PROCEED = "APPROVE_TO_PROCEED"
+    USE_EXISTING_TOOL = "USE_EXISTING_TOOL"
+    NEEDS_MORE_INFO = "NEEDS_MORE_INFO"
+    ESCALATE_TO_HUMAN = "ESCALATE_TO_HUMAN"
+    REJECT_BLOCKED = "REJECT_BLOCKED"
+
+
+class SeverityEnum(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
 
 
 class EvidenceItem(BaseModel):
-    source: str = Field(description="Tool/data source name")
-    finding: str = Field(description="Concise factual finding")
-    reference: str | None = Field(default=None, description="Optional record ID / policy section / endpoint")
+    claim: str = Field(description="Factual claim made in the evaluation")
+    tool_call_id: str = Field(description="Exact tool_call_id from which this evidence originates")
+    source_tool: str = Field(description="Name of the tool providing this evidence")
+    value: Any = Field(description="Factual value or data snippet returned by the tool")
+
+    def __str__(self) -> str:
+        return f"[{self.source_tool}:{self.tool_call_id}] {self.claim} -> {self.value}"
+
+
+class ApprovalRequirement(BaseModel):
+    role: str = Field(description="Role required to approve (e.g. Manager, Department Head, Finance, Procurement, Security, Privacy, Legal, CFO)")
+    why: str = Field(description="Specific deterministic policy rule or threshold triggering this approval")
+
+    def __str__(self) -> str:
+        return f"{self.role}: {self.why}"
+
+
+class RiskFlagItem(BaseModel):
+    flag: str = Field(description="Standardized risk flag identifier")
+    severity: SeverityEnum | str = Field(default=SeverityEnum.MEDIUM, description="Risk severity level: LOW, MEDIUM, HIGH, CRITICAL")
+    evidence_ref: str | None = Field(default=None, description="Optional tool_call_id or evidence citation")
+
+    def __str__(self) -> str:
+        return f"{self.flag} ({self.severity}) - ref: {self.evidence_ref}"
 
 
 class RunTelemetry(BaseModel):
-    llm_calls: int | None = None
-    tool_calls: int | None = None
+    llm_calls: int = 0
+    tool_calls: int = 0
     tool_names: list[str] = Field(default_factory=list)
+    latency_ms: float = 0.0
+    estimated_tokens: int = 0
 
 
 class ProcurementDecision(BaseModel):
     request_id: str
-    recommendation: str = Field(description="Short recommendation label or sentence")
-    evidence: list[EvidenceItem] = Field(default_factory=list)
-    required_approvals: list[str] = Field(default_factory=list)
-    missing_information: list[str] = Field(default_factory=list)
-    risk_flags: list[str] = Field(default_factory=list)
-    next_step: str
-    human_review_required: bool = True
+    recommendation: RecommendationEnum | str = Field(
+        description="Decision enum: APPROVE_TO_PROCEED, USE_EXISTING_TOOL, NEEDS_MORE_INFO, ESCALATE_TO_HUMAN, REJECT_BLOCKED"
+    )
+    rationale: str = Field(default="", description="Short concise rationale explaining the recommendation")
+    evidence: list[EvidenceItem] = Field(default_factory=list, description="Grounding evidence citing real tool calls")
+    approvals_required: list[ApprovalRequirement] = Field(
+        default_factory=list,
+        description="Required approver roles + deterministic reasons computed by code"
+    )
+    missing_information: list[str] = Field(
+        default_factory=list,
+        description="Specific clarifying questions if material info is missing"
+    )
+    risk_flags: list[RiskFlagItem] = Field(
+        default_factory=list,
+        description="Identified risk flags with severity and evidence references"
+    )
+    next_step: str = Field(description="Concrete next action and assigned owner")
+    requires_human_review: bool = Field(default=True, description="Always true for procurement actions")
+    human_review_reason: str = Field(default="Human review required per procurement policy", description="Reason human action is needed")
     telemetry: RunTelemetry | None = None
+
+    # Backwards compatibility properties and validators for eval harness
+    @property
+    def required_approvals(self) -> list[str]:
+        return [a.role if isinstance(a, ApprovalRequirement) else str(a) for a in self.approvals_required]
+
+    @property
+    def human_review_required(self) -> bool:
+        return self.requires_human_review
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_input_data(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            # Normalize required_approvals vs approvals_required
+            if "required_approvals" in data and "approvals_required" not in data:
+                raw_apps = data["required_approvals"]
+                data["approvals_required"] = [
+                    {"role": a, "why": "Policy threshold"} if isinstance(a, str) else a
+                    for a in raw_apps
+                ]
+            # Normalize human_review_required vs requires_human_review
+            if "human_review_required" in data and "requires_human_review" not in data:
+                data["requires_human_review"] = data["human_review_required"]
+            # Normalize evidence items
+            if "evidence" in data and isinstance(data["evidence"], list):
+                norm_ev = []
+                for ev in data["evidence"]:
+                    if isinstance(ev, dict):
+                        if "claim" not in ev and "finding" in ev:
+                            ev["claim"] = ev["finding"]
+                        if "tool_call_id" not in ev:
+                            ev["tool_call_id"] = ev.get("reference") or "call_unknown"
+                        if "source_tool" not in ev and "source" in ev:
+                            ev["source_tool"] = ev["source"]
+                        if "value" not in ev:
+                            ev["value"] = ev.get("finding", "")
+                    norm_ev.append(ev)
+                data["evidence"] = norm_ev
+            # Normalize risk_flags items
+            if "risk_flags" in data and isinstance(data["risk_flags"], list):
+                norm_rf = []
+                for rf in data["risk_flags"]:
+                    if isinstance(rf, str):
+                        norm_rf.append({"flag": rf, "severity": "MEDIUM", "evidence_ref": None})
+                    else:
+                        norm_rf.append(rf)
+                data["risk_flags"] = norm_rf
+        return data
 
 
 Architecture = Literal["single", "staged"]
-
-# Suggested approval names for consistency in evaluation:
-# Manager, Department Head, Procurement, Finance, CFO, Security, Privacy, Legal
-#
-# Suggested risk-flag taxonomy (you may add others):
-# existing_tool_overlap
-# budget_insufficient
-# security_review_required
-# privacy_review_required
-# legal_review_required
-# vendor_review_expired
-# conflicting_vendor_evidence
-# vendor_risk_unavailable
-# prompt_injection_detected
-# missing_information
