@@ -16,12 +16,23 @@ T = TypeVar("T", bound=BaseModel)
 
 class LLMClient:
     def __init__(self, model_name: str | None = None, provider: str | None = None):
-        self.mock_mode = os.getenv("MOCK_LLM", "0").lower() in ("1", "true", "yes")
         self.gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         self.openai_key = os.getenv("OPENAI_API_KEY")
+        has_real_key = bool(self.gemini_key or self.openai_key)
+
+        mock_env = os.getenv("MOCK_LLM")
+        if mock_env is not None:
+            self.mock_mode = mock_env.lower() in ("1", "true", "yes")
+        else:
+            # Default to mock only if no real API key is configured
+            self.mock_mode = not has_real_key
 
         if provider:
             self.provider = provider.lower()
+        elif not self.mock_mode and self.gemini_key:
+            self.provider = "gemini"
+        elif not self.mock_mode and self.openai_key:
+            self.provider = "openai"
         elif self.gemini_key:
             self.provider = "gemini"
         elif self.openai_key:
@@ -81,6 +92,10 @@ class LLMClient:
             req = fallback_context.get("request", {})
             tools = fallback_context.get("executed_tools", {})
             arch = fallback_context.get("architecture", "single")
+            if schema_cls.__name__ == "StructuredEvidencePack":
+                pack = fallback_context.get("evidence_pack", {})
+                parsed = schema_cls.model_validate(pack)
+                return parsed, call_count, tokens_est
             raw_dict = generate_mock_procurement_decision(req, tools, arch)
             parsed = schema_cls.model_validate(raw_dict)
             return parsed, call_count, tokens_est

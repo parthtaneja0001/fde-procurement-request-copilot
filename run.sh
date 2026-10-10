@@ -16,6 +16,17 @@ if [ ! -d ".venv" ]; then
 fi
 
 export PYTHONPATH="."
-export MOCK_LLM="${MOCK_LLM:-1}"
+# Read .env if present
+if [ -f ".env" ]; then
+    set -a
+    source .env 2>/dev/null || true
+    set +a
+fi
+
+if [ -n "$GEMINI_API_KEY" ] || [ -n "$GOOGLE_API_KEY" ] || [ -n "$OPENAI_API_KEY" ]; then
+    export MOCK_LLM="${MOCK_LLM:-0}"
+else
+    export MOCK_LLM="${MOCK_LLM:-1}"
+fi
 
 exec .venv/bin/python run_local.py
