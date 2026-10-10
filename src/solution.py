@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from src.contracts import Architecture, ProcurementDecision
+from src.data_access import get_request
+from src.agents.single_agent import run_single_agent_pipeline
+from src.agents.staged_agents import run_staged_agents_pipeline
 
 
 def handle_request(request_id: str, architecture: Architecture = "single") -> ProcurementDecision:
     """Assessment adapter.
-
-    Keep this function callable by the public/hidden evaluation harness.
-    Your internal implementation may use any framework, modules, agents, tools,
-    deterministic checks, or orchestration strategy.
+    Dispatches request to either Architecture A ('single') or Architecture B ('staged').
     """
-    raise NotImplementedError(
-        "Implement handle_request(...) as part of Assessment 3. "
-        "Return a ProcurementDecision-compatible object."
-    )
+    request_data = get_request(request_id)
+    if architecture == "staged":
+        return run_staged_agents_pipeline(request_data)
+    return run_single_agent_pipeline(request_data)

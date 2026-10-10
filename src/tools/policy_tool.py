@@ -35,14 +35,15 @@ def check_policy_and_approvals(
     has_vendor_conflict: bool = False,
     vendor_api_unavailable: bool = False,
     has_prompt_injection: bool = False,
+    has_tool_overlap: bool = False,
     tool_call_id: str | None = None,
 ) -> dict[str, Any]:
     """DETERMINISTIC policy engine: computes financial approval tiers, specialized reviews (Security, Privacy, Legal),
     risk flags, and hard-block conditions purely in code. LLM can NEVER override this."""
     source = "check_policy_and_approvals"
 
-    approvals: list[dict[str, str]] = []  # [{ "role": "...", "reason": "..." }]
-    risk_flags: list[dict[str, str]] = []  # [{ "flag": "...", "severity": "...", "reason": "..." }]
+    approvals: list[dict[str, str]] = []
+    risk_flags: list[dict[str, str]] = []
     hard_blocks: list[str] = []
     missing_fields: list[str] = []
 
@@ -84,7 +85,6 @@ def check_policy_and_approvals(
                 "reason": f"Requested cost (${cost_val:,.2f}) exceeds available department budget (${avail_val:,.2f}) by ${shortfall:,.2f}",
             })
             hard_blocks.append(f"Budget exceeded by ${shortfall:,.2f}")
-            # Ensure Finance approval is required for budget exception
             if not any(a["role"] == "Finance" for a in approvals):
                 approvals.append({"role": "Finance", "reason": "Budget exception approval required due to insufficient funds"})
 
@@ -197,7 +197,15 @@ def check_policy_and_approvals(
             "reason": "; ".join(legal_reasons),
         })
 
-    # 6. Prompt Injection Flag
+    # 6. Existing Tool Overlap Flag
+    if has_tool_overlap:
+        risk_flags.append({
+            "flag": "existing_tool_overlap",
+            "severity": "MEDIUM",
+            "reason": "Existing alternative software or enterprise capacity detected in catalog",
+        })
+
+    # 7. Prompt Injection Flag
     if has_prompt_injection:
         risk_flags.append({
             "flag": "prompt_injection_detected",
@@ -206,7 +214,7 @@ def check_policy_and_approvals(
         })
         hard_blocks.append("Adversarial prompt injection detected")
 
-    # 7. Deduplicate roles while preserving order
+    # Deduplicate roles while preserving order
     unique_approvals: list[dict[str, str]] = []
     seen_roles: set[str] = set()
     for item in approvals:
@@ -214,7 +222,6 @@ def check_policy_and_approvals(
             unique_approvals.append(item)
             seen_roles.add(item["role"])
 
-    # Human review is always mandatory per Section 11
     requires_human_review = True
     human_reasons: list[str] = []
     if hard_blocks:

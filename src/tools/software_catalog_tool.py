@@ -80,10 +80,17 @@ def search_software_catalog(
 
         matches.sort(key=lambda x: x["relevance_score"], reverse=True)
 
+        # Determine overlap
+        has_overlap = len(matches) > 0 and (
+            any(m["relevance_score"] >= 0.7 for m in matches)
+            or any(category_lower and category_lower in m["category"].lower() for m in matches)
+        )
+
         data = {
             "query": query,
             "category_filter": category,
             "match_count": len(matches),
+            "has_overlap": has_overlap,
             "exact_matches": [m for m in matches if m["relevance_score"] >= 0.8],
             "potential_alternatives": matches,
         }
