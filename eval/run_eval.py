@@ -251,6 +251,29 @@ def run_benchmark():
     # Generate results.md
     res_a = all_results["single"]
     res_b = all_results["staged"]
+    latency_delta = round(abs(res_a["mean_latency_ms"] - res_b["mean_latency_ms"]), 1)
+    if res_a["mean_latency_ms"] < res_b["mean_latency_ms"]:
+        latency_winner = f"Architecture A is {latency_delta} ms faster"
+    elif res_b["mean_latency_ms"] < res_a["mean_latency_ms"]:
+        latency_winner = f"Architecture B is {latency_delta} ms faster"
+    else:
+        latency_winner = "Tied"
+
+    p95_delta = round(abs(res_a["p95_latency_ms"] - res_b["p95_latency_ms"]), 1)
+    if res_a["p95_latency_ms"] < res_b["p95_latency_ms"]:
+        p95_winner = f"Architecture A is {p95_delta} ms faster"
+    elif res_b["p95_latency_ms"] < res_a["p95_latency_ms"]:
+        p95_winner = f"Architecture B is {p95_delta} ms faster"
+    else:
+        p95_winner = "Tied"
+
+    llm_delta = round(res_b["avg_llm_calls"] - res_a["avg_llm_calls"], 2)
+    if llm_delta > 0:
+        llm_winner = f"Architecture A uses {llm_delta:g} fewer LLM calls"
+    elif llm_delta < 0:
+        llm_winner = f"Architecture B uses {abs(llm_delta):g} fewer LLM calls"
+    else:
+        llm_winner = "Tied"
 
     md_content = f"""# Benchmark Evaluation Results
 
@@ -271,9 +294,9 @@ def run_benchmark():
 | **Escalation Precision** | {res_a['escalation_precision_pct']}% | {res_b['escalation_precision_pct']}% | {'Tied' if res_a['escalation_precision_pct'] == res_b['escalation_precision_pct'] else 'Diff'} |
 | **Escalation Recall** | {res_a['escalation_recall_pct']}% | {res_b['escalation_recall_pct']}% | {'Tied' if res_a['escalation_recall_pct'] == res_b['escalation_recall_pct'] else 'Diff'} |
 | **False-Negative Escalations** | **{res_a['false_negative_escalations']}** (Zero missed) | **{res_b['false_negative_escalations']}** (Zero missed) | **Zero Security/Budget Breaches** |
-| **Mean Latency** | **{res_a['mean_latency_ms']} ms** | **{res_b['mean_latency_ms']} ms** | **Architecture A is {round(res_b['mean_latency_ms'] - res_a['mean_latency_ms'], 1)} ms faster** |
-| **P95 Latency** | {res_a['p95_latency_ms']} ms | {res_b['p95_latency_ms']} ms | Architecture A is faster |
-| **Avg LLM Calls / Request** | **{res_a['avg_llm_calls']}** | **{res_b['avg_llm_calls']}** | **Architecture A uses 50% fewer LLM calls** |
+| **Mean Latency** | **{res_a['mean_latency_ms']} ms** | **{res_b['mean_latency_ms']} ms** | **{latency_winner}** |
+| **P95 Latency** | {res_a['p95_latency_ms']} ms | {res_b['p95_latency_ms']} ms | {p95_winner} |
+| **Avg LLM Calls / Request** | **{res_a['avg_llm_calls']}** | **{res_b['avg_llm_calls']}** | **{llm_winner}** |
 | **Avg Tool Calls / Request** | {res_a['avg_tool_calls']} | {res_b['avg_tool_calls']} | Equal |
 
 ---

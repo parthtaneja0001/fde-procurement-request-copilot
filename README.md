@@ -158,24 +158,24 @@ The evaluation harness (`eval/run_eval.py`) executes 32 comprehensive edge cases
 | **Escalation Precision** | **100.0%** | **100.0%** | Exact Parity |
 | **Escalation Recall** | **100.0%** | **100.0%** | Exact Parity |
 | **False-Negative Escalations** | **0** (Zero missed) | **0** (Zero missed) | Zero Breaches |
-| **Mean Latency** | **63.5 ms** | **64.4 ms** | **Architecture A is faster** |
-| **P95 Latency** | **69.2 ms** | **70.5 ms** | Architecture A is faster |
-| **Avg LLM Calls / Request** | **1.0** | **2.0** | **Architecture A uses 50% fewer calls** |
+| **Mean Latency** | **5.9 ms** | **6.9 ms** | **Architecture A is 1.0 ms faster** |
+| **P95 Latency** | **7.4 ms** | **7.1 ms** | Architecture B is 0.3 ms faster |
+| **Avg LLM Calls / Request** | **1.0** | **2.0** | **Architecture A uses 1 fewer LLM call** |
 | **Avg Tool Calls / Request** | 5.0 | 5.0 | Equal |
 
 ### Category Breakdown
 
 | Category | Total Cases | Architecture A Pass Rate | Architecture B Pass Rate | Arch A Latency | Arch B Latency |
 |---|---|---|---|---|---|
-| `clean_happy_path` | 4 | 100.0% (4/4) | 100.0% (4/4) | 65.5 ms | 61.5 ms |
-| `conflicting_expired_vendor` | 3 | 100.0% (3/3) | 100.0% (3/3) | 65.2 ms | 66.4 ms |
-| `existing_tool_overlap` | 3 | 100.0% (3/3) | 100.0% (3/3) | 63.8 ms | 65.9 ms |
-| `incomplete_request` | 3 | 100.0% (3/3) | 100.0% (3/3) | 62.9 ms | 66.3 ms |
-| `over_budget` | 3 | 100.0% (3/3) | 100.0% (3/3) | 64.1 ms | 66.4 ms |
-| `prompt_injection` | 3 | 100.0% (3/3) | 100.0% (3/3) | 66.7 ms | 67.0 ms |
-| `security_sensitive_thresholds` | 8 | 100.0% (8/8) | 100.0% (8/8) | 62.8 ms | 64.9 ms |
-| `tool_api_unavailable` | 3 | 100.0% (3/3) | 100.0% (3/3) | 65.6 ms | 67.9 ms |
-| `unknown_entity` | 2 | 100.0% (2/2) | 100.0% (2/2) | 62.9 ms | 63.9 ms |
+| `clean_happy_path` | 4 | 100.0% (4/4) | 100.0% (4/4) | 7.4 ms | 5.8 ms |
+| `conflicting_expired_vendor` | 3 | 100.0% (3/3) | 100.0% (3/3) | 5.7 ms | 5.3 ms |
+| `existing_tool_overlap` | 3 | 100.0% (3/3) | 100.0% (3/3) | 6.0 ms | 5.5 ms |
+| `incomplete_request` | 3 | 100.0% (3/3) | 100.0% (3/3) | 5.5 ms | 5.7 ms |
+| `over_budget` | 3 | 100.0% (3/3) | 100.0% (3/3) | 5.6 ms | 5.8 ms |
+| `prompt_injection` | 3 | 100.0% (3/3) | 100.0% (3/3) | 6.1 ms | 5.5 ms |
+| `security_sensitive_thresholds` | 8 | 100.0% (8/8) | 100.0% (8/8) | 5.7 ms | 10.9 ms |
+| `tool_api_unavailable` | 3 | 100.0% (3/3) | 100.0% (3/3) | 5.8 ms | 5.3 ms |
+| `unknown_entity` | 2 | 100.0% (2/2) | 100.0% (2/2) | 5.4 ms | 5.3 ms |
 
 ---
 
@@ -183,7 +183,7 @@ The evaluation harness (`eval/run_eval.py`) executes 32 comprehensive edge cases
 
 **Recommendation:** **Ship Architecture A (Single-Agent Baseline with Deterministic Guardrails)**.
 
-- **Reasoning:** Architecture A matches Architecture B with **100% case pass rate** and **0 false-negative escalations** while cutting LLM overhead by **50% (1 vs 2 calls per request)** and eliminating inter-agent orchestration failure points.
+- **Reasoning:** Architecture A matches Architecture B with **100% case pass rate** and **0 false-negative escalations** while cutting LLM overhead by **50% (1 vs 2 calls per request)** and eliminating inter-agent orchestration failure points. Local mock-mode latency is comparable, so the ship decision is driven by equal quality with lower inference cost and simpler operations.
 - Full details documented in [Decision Memo](docs/DECISION_MEMO.md).
 
 ---

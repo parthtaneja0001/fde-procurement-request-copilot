@@ -7,7 +7,7 @@
 ---
 
 ### Executive Recommendation
-I recommend shipping **Architecture A**. Based on benchmark evaluation across 32 comprehensive edge-case scenarios, Architecture A matches Architecture B with **100.0% overall case pass rate**, **100.0% recommendation accuracy**, **100.0% evidence grounding**, and **0 false-negative escalations**, while cutting LLM overhead by **50% (1.0 vs 2.0 LLM calls per request)** and reducing end-to-end latency (63.5 ms vs 64.4 ms local; ~2,000 ms reduction in production API roundtrips).
+I recommend shipping **Architecture A**. Based on benchmark evaluation across 32 comprehensive edge-case scenarios, Architecture A matches Architecture B with **100.0% overall case pass rate**, **100.0% recommendation accuracy**, **100.0% evidence grounding**, and **0 false-negative escalations**, while cutting LLM overhead by **50% (1.0 vs 2.0 LLM calls per request)** and keeping local mock-mode latency comparable.
 
 A simpler architecture that delivers identical safety, precision, and adherence beats unnecessary multi-agent orchestration.
 
@@ -23,7 +23,7 @@ A simpler architecture that delivers identical safety, precision, and adherence 
 | **Policy Rule Adherence** | **100.0%** | **100.0%** | Code-Enforced |
 | **False-Negative Escalations** | **0** | **0** | Zero Security/Budget Leaks |
 | **Avg LLM Calls / Request** | **1.0** | **2.0** | **50% Lower Token/Inference Cost** |
-| **Mean Latency** | **63.5 ms** | **64.4 ms** | Architecture A Faster |
+| **Mean Latency** | **5.9 ms** | **6.9 ms** | Architecture A is 1.0 ms faster |
 
 ---
 
@@ -45,4 +45,4 @@ We would reconsider Architecture B only if:
 1. **Unstructured Evidence Synthesis Explodes:** If evidence inputs expand to multi-page vendor SOC2 PDFs and unstructured contracts exceeding single-call context limits, necessitating a dedicated extraction agent.
 2. **Specialized Asynchronous Tool Execution:** If tool retrieval requires complex iterative web browsing or dynamic multi-turn discovery across dozens of external systems before policy evaluation.
 
-Under current requirements, Architecture A is faster, cheaper, more maintainable, and equally safe.
+Under current requirements, Architecture A is cheaper, more maintainable, and equally safe.

@@ -50,6 +50,10 @@ class LLMClient:
             req = fallback_context.get("request", {}) if fallback_context else {}
             tools = fallback_context.get("executed_tools", {}) if fallback_context else {}
             arch = fallback_context.get("architecture", "single") if fallback_context else "single"
+            if fallback_context and schema_cls.__name__ == "StructuredEvidencePack":
+                pack = fallback_context.get("evidence_pack", {})
+                parsed = schema_cls.model_validate(pack)
+                return parsed, 1, 250
             raw_dict = generate_mock_procurement_decision(req, tools, arch)
             parsed = schema_cls.model_validate(raw_dict)
             return parsed, 1, 350

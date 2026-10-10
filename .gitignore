@@ -7,3 +7,4 @@ __pycache__/
 evals/results_*.csv
 data/human_decisions.db
 data/human_decisions.jsonl
+.vscode/

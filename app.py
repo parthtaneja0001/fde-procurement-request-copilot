@@ -9,7 +9,6 @@ import streamlit as st
 
 from src.agents.single_agent import run_single_agent_pipeline
 from src.agents.staged_agents import run_staged_agents_pipeline
-from src.contracts import RecommendationEnum, SeverityEnum
 from src.human_review import get_human_decisions, record_human_decision
 from src.solution import handle_request
 
@@ -183,7 +182,7 @@ with col_left:
 
 with col_right:
     st.subheader("⚡ Copilot Analysis")
-    run_clicked = st.button("🚀 Analyze Procurement Request", type="primary", use_container_width=True)
+    run_clicked = st.button("Analyze Procurement Request", type="primary", use_container_width=True)
 
     if run_clicked or "last_result" in st.session_state and st.session_state.get("last_req_id") == active_request["request_id"]:
         if run_clicked:

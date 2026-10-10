@@ -183,6 +183,31 @@ def run_staged_agents_pipeline(request: dict[str, Any], llm_client: LLMClient | 
         grounded_evidence=grounded_evidence,
     )
 
+    analyst_user_prompt = f"""<untrusted_request>
+{json.dumps(request, indent=2)}
+</untrusted_request>
+
+<tool_results>
+{json.dumps(executed_tools, indent=2)}
+</tool_results>
+
+Compile a structured evidence pack from the request and tool results. Do not make a final procurement recommendation.
+"""
+
+    evidence_pack, llm_calls, tokens = client.generate_structured(
+        system_prompt=ANALYST_SYSTEM_PROMPT,
+        user_prompt=analyst_user_prompt,
+        schema_cls=StructuredEvidencePack,
+        fallback_context={
+            "request": request,
+            "executed_tools": executed_tools,
+            "architecture": "staged",
+            "evidence_pack": evidence_pack.model_dump(),
+        },
+    )
+    total_llm_calls += llm_calls
+    total_tokens += tokens
+
     # 4. Agent 2: Policy & Risk Reviewer
     reviewer_user_prompt = f"""<structured_evidence_pack>
 {evidence_pack.model_dump_json(indent=2)}
